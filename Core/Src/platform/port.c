@@ -160,8 +160,6 @@ void reset_DW1000(void)
     //setup_DW1000RSTnIRQ(0);
     HAL_GPIO_WritePin(DW_RST_GPIO_Port, DW_RST_Pin, GPIO_PIN_SET);
 
-
-
     Sleep(2);
 }
 
@@ -289,7 +287,7 @@ void port_set_dw1000_slowrate(void)
  * */
 void port_set_dw1000_fastrate(void)
 {
-    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
     HAL_SPI_Init(&hspi1);
 }
 

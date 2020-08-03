@@ -136,6 +136,32 @@ int readfromspi(uint16_t headerLength,
     //decamutexoff(stat);
 
     return 0;
+
+//	int i;
+//	decaIrqStatus_t stat ;
+//	stat = decamutexon() ;
+//	char temp;
+//	/* Blocking: Check whether previous transfer has been finished */
+//	while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY);
+//
+//	HAL_GPIO_WritePin(DW_NSS_GPIO_Port, DW_NSS_Pin, GPIO_PIN_RESET); /**< Put chip select line low */
+//
+//	/* Send header */
+//	for(i=0; i<headerLength; i++)
+//	{
+//	    //HAL_SPI_Transmit(&hspi1, &headerBuffer[i], 1, HAL_MAX_DELAY); //No timeout
+//		HAL_SPI_TransmitReceive(&hspi1, &headerBuffer[i], (uint8_t *)&temp, 1, HAL_MAX_DELAY);
+//	}
+//
+//	/* for the data buffer use LL functions directly as the HAL SPI read function
+//	 * has issue reading single bytes */
+//	HAL_SPI_TransmitReceive(&hspi1, &headerBuffer[i], (uint8_t *)readBuffer, readlength, HAL_MAX_DELAY);
+//
+//	HAL_GPIO_WritePin(DW_NSS_GPIO_Port, DW_NSS_Pin, GPIO_PIN_SET); /**< Put chip select line high */
+//
+//	decamutexoff(stat);
+//
+//	return 0;
 } // end readfromspi()
 
 /****************************************************************************//**

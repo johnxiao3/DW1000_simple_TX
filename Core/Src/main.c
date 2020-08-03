@@ -141,14 +141,14 @@ DW1000_read(uint8_t reg,uint8_t length,uint8_t *temp8)
 	HAL_GPIO_WritePin(DW_NSS_GPIO_Port, DW_NSS_Pin, GPIO_PIN_SET); /**< Put chip select line high */
 	//for(uint8_t i=0;i<4;i++)temp = temp*0x100+temp8[3-i];
 }
-uint8 DW1000_init()
+uint8 DW1000_init_fail()
 {
 	uint8 init_fail = 1;
 	uint8 const fail_count = 20;
 	for(uint8 i=0;i<fail_count;i++){
 	  if (!(dwt_initialise(DWT_LOADUCODE) == DWT_ERROR))
 	  {
-		  //debugPrint("INIT SUCCESS\r\n");
+		  debugPrint("INIT SUCCESS\r\n");
 		  init_fail = 0;
 		  break;
 	  }
@@ -163,92 +163,6 @@ void PrintReg(reg_id,reg_len)
 	for(uint8_t i=0;i<reg_len;i++)debugInt8Hex(temp[reg_len-i-1]);
 	debugPrint("\r\n");
  }
-void printAllReg()
-{
-	  debugPrint("======================================\r\n");
-	  debugPrint("DEV_ID_ID:\t\t");
-	  PrintReg(DEV_ID_ID,DEV_ID_LEN);
-
-	  debugPrint("EUI_64_ID:\t\t");
-	  PrintReg(EUI_64_ID,EUI_64_LEN);
-
-	  debugPrint("PANADR_ID:\t\t");
-	  PrintReg(PANADR_ID,PANADR_LEN);
-
-	  debugPrint("SYS_CFG_ID:\t\t");
-	  PrintReg(SYS_CFG_ID,SYS_CFG_LEN);
-
-	  debugPrint("SYS_TIME_ID:\t\t");
-	  PrintReg(SYS_TIME_ID,SYS_TIME_LEN);
-
-	  debugPrint("TX_FCTRL_ID:\t\t");
-	  PrintReg(TX_FCTRL_ID,TX_FCTRL_LEN);
-
-	  debugPrint("DX_TIME_ID:\t\t");
-	  PrintReg(DX_TIME_ID,DX_TIME_LEN);
-
-	  debugPrint("RX_FWTO_ID:\t\t");
-	  PrintReg(RX_FWTO_ID,RX_FWTO_LEN);
-
-	  debugPrint("SYS_CTRL_ID:\t\t");
-	  PrintReg(SYS_CTRL_ID,SYS_CTRL_LEN);
-
-	  debugPrint("SYS_MASK_ID:\t\t");
-	  PrintReg(SYS_MASK_ID,SYS_MASK_LEN);
-
-	  debugPrint("SYS_STATUS_ID:\t\t");
-	  PrintReg(SYS_STATUS_ID,SYS_STATUS_LEN);
-
-	  debugPrint("RX_FINFO_ID:\t\t");
-	  PrintReg(RX_FINFO_ID,RX_FINFO_LEN);
-
-	  debugPrint("RX_FQUAL_ID:\t\t");
-	  PrintReg(RX_FQUAL_ID,RX_FQUAL_LEN);
-
-	  debugPrint("RX_TTCKI_ID:\t\t");
-	  PrintReg(RX_TTCKI_ID,RX_TTCKI_LEN);
-
-	  debugPrint("RX_TTCKO_ID:\t\t");
-	  PrintReg(RX_TTCKO_ID,RX_TTCKO_LEN);
-
-	  debugPrint("RX_TIME_ID:\t\t");
-	  PrintReg(RX_TIME_ID,RX_TIME_LLEN);
-
-	  //debugPrint("TX_TIME_ID:\t\t");
-	  //PrintReg(TX_TIME_ID,TX_TIME_LLEN);
-
-	  debugPrint("TX_ANTD_ID:\t\t");
-	  PrintReg(TX_ANTD_ID,TX_ANTD_LEN);
-
-	  debugPrint("ACK_RESP_T_ID:\t\t");
-	  PrintReg(ACK_RESP_T_ID,ACK_RESP_T_LEN);
-
-	  debugPrint("RX_SNIFF_ID:\t\t");
-	  PrintReg(RX_SNIFF_ID,RX_SNIFF_ID);
-
-	  debugPrint("TX_POWER_ID:\t\t");
-	  PrintReg(TX_POWER_ID,TX_POWER_LEN);
-
-	  debugPrint("CHAN_CTRL_ID:\t\t");
-	  PrintReg(CHAN_CTRL_ID,CHAN_CTRL_LEN);
-
-	  debugPrint("USR_SFD_ID:\t\t");
-	  PrintReg(USR_SFD_ID,USR_SFD_LEN);
-
-	  debugPrint("AGC_CTRL_ID:\t\t");
-	  PrintReg(AGC_CTRL_ID,AGC_CTRL_LEN);
-
-	  debugPrint("EXT_SYNC_ID:\t\t");
-	  PrintReg(EXT_SYNC_ID,EXT_SYNC_LEN);
-
-	  debugPrint("AON_ID:\t\t\t");
-	  PrintReg(AON_ID,AON_LEN);
-
-	  debugPrint("OTP_IF_ID:\t\t");
-	  PrintReg(OTP_IF_ID,OTP_IF_LEN);
-
-	  debugPrint("======================================\r\n");
-}
 /*-------------------------------------define ---------*/
 
 /* Inter-ranging delay period, in milliseconds. */
@@ -327,21 +241,70 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  uint32 u32;
   port_set_dw1000_slowrate();
-  port_set_dw1000_fastrate();
-
+  //port_set_dw1000_fastrate();
+  debugPrint("\r\n===============Restart_TX V1.0.1=================\r\n");
   while(1)
   {
-	  debugPrint("===============Restart_TX V1.0.1=================\r\n");
-	  reset_DW1000(); /* Target specific drive of RSTn line into DW1000 low for a period. */
-	  while(DW1000_init() == 1)continue;
-	  //DW1000_init();
+	  //DWReset();
+	  reset_DW1000();
+	  u32 = dwt_readdevid();
+//	  debugInt32Hexln(u32);
+
+	  while((u32 = dwt_read32bitreg(SYS_CFG_ID))!=0x00001600)
+		  dwt_write32bitreg(SYS_CFG_ID,0x00001600);
+//	  debugInt32Hexln(u32);
+
+	  //port_set_dw1000_fastrate();
+	  debugInt32Hexln(dwt_read32bitoffsetreg(EXT_SYNC_ID,EC_CTRL_OFFSET));
+	  //reset_DW1000(); /* Target specific drive of RSTn line into DW1000 low for a period. */
+	  if(DW1000_init_fail())continue; //1 means initiate fails
+
+	  //port_set_dw1000_fastrate();
+	  if(dwt_read32bitreg(SYS_CFG_ID)!=0x00001200)continue;
+
+	  while((u32 = dwt_read32bitreg(SYS_CFG_ID))!=0x00001600)
+		  dwt_write32bitreg(SYS_CFG_ID,0x00001600);
+
+//	  debugInt32Hexln(dwt_read32bitreg(DEV_ID_ID));
+//	  debugInt32Hexln(dwt_read32bitreg(SYS_CFG_ID));
+//	  debugInt32Hexln(dwt_read32bitreg(SYS_STATUS_ID));
+//	  debugInt32Hexln(dwt_read32bitoffsetreg(DRX_CONF_ID,DRX_TUNE2_OFFSET));
+//	  debugInt16Hexln(dwt_read16bitoffsetreg(LDE_IF_ID,LDE_CFG2_OFFSET));
+//	  debugInt16Hexln(dwt_read16bitoffsetreg(AGC_CTRL_ID,AGC_TUNE1_OFFSET));
+
+	  debugInt32Hexln(dwt_read32bitoffsetreg(EXT_SYNC_ID,EC_CTRL_OFFSET));
+
+
+	  //dwt_write8bitoffsetreg(EXT_SYNC_ID, EC_CTRL_OFFSET, EC_CTRL_PLLLCK);
+
+
+	  HAL_Delay(1000);
+
+	  uint8 dataA[10] = {0x11,0x22,0x33,0x44,0x55,0x66,0x78,0x9A,0xBC,0xDE};
+	  uint8 dataB[10];
+	  dwt_writetodevice(0x21, 0, 10, &dataA);
+	  dwt_readfromdevice(0x21, 0 , 10,&dataB);
+
+
+	  debugInt8Hex(dataB[0]);
+	  debugInt8Hex(dataB[1]);
+	  debugInt8Hex(dataB[2]);
+	  debugInt8Hex(dataB[3]);
+	  debugInt8Hex(dataB[4]);
+	  debugInt8Hex(dataB[5]);
+	  debugInt8Hex(dataB[6]);
+	  debugInt8Hex(dataB[7]);
+	  debugInt8Hex(dataB[8]);
+	  debugInt8Hex(dataB[9]);
+
+	  while(1);
+
 
 
 	  /* Configure DW1000. See NOTE 7 below. */
 	  dwt_configure(&config);
-	  uint32 u32;
 
 	  HAL_Delay(200);
 	  u32 = 0;
@@ -438,12 +401,13 @@ void SystemClock_Config(void)
 
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL2;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -457,7 +421,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -486,7 +450,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -562,17 +526,24 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DW_RST_Pin DW_NSS_Pin */
-  GPIO_InitStruct.Pin = DW_RST_Pin|DW_NSS_Pin;
+  /*Configure GPIO pin : DW_RST_Pin */
+  GPIO_InitStruct.Pin = DW_RST_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(DW_RST_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : DW_NSS_Pin */
+  GPIO_InitStruct.Pin = DW_NSS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(DW_NSS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : DW_IRQn_Pin */
   GPIO_InitStruct.Pin = DW_IRQn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(DW_IRQn_GPIO_Port, &GPIO_InitStruct);
 
 }
