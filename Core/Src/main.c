@@ -102,45 +102,6 @@ void debugInt8Hex(uint8_t uint8data)
 	sprintf(buff,"%02X",uint8data);
 	HAL_UART_Transmit(&huart1, buff, 2, 200);
 }
-void DWReset()
-{
-	HAL_GPIO_WritePin(DW_RST_GPIO_Port, DW_RST_Pin, GPIO_PIN_RESET);
-	HAL_Delay(1);
-	HAL_GPIO_WritePin(DW_RST_GPIO_Port, DW_RST_Pin, GPIO_PIN_SET);
-	HAL_Delay(1);
-}
-uint32_t DW1000_read_DeviceID()
-{
-	uint32_t temp = 0;
-	uint8_t temp8[4] = {0,0,0,0};
-	//uint8 temp7[4] = {0x30,0x01,0xCA,0xDE};
-	/* Blocking: Check whether previous transfer has been finished */
-	while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY);
-	HAL_GPIO_WritePin(DW_NSS_GPIO_Port, DW_NSS_Pin, GPIO_PIN_RESET); /**< Put chip select line low */
-	HAL_SPI_Transmit(&hspi1, 0x00, 1, HAL_MAX_DELAY); //No timeout
-	while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY);
-    HAL_SPI_Receive(&hspi1, &temp8[0], 1, HAL_MAX_DELAY);  // receive 4 bytes data
-    HAL_SPI_Receive(&hspi1, &temp, 4, HAL_MAX_DELAY);  // receive 4 bytes data
-    while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY);
-    HAL_GPIO_WritePin(DW_NSS_GPIO_Port, DW_NSS_Pin, GPIO_PIN_SET); /**< Put chip select line high */
-    //for(uint8_t i=0;i<4;i++)temp = temp*0x100+temp8[3-i];
-    return temp;
-}
-
-DW1000_read(uint8_t reg,uint8_t length,uint8_t *temp8)
-{
-	uint8_t temp = 0;
-	/* Blocking: Check whether previous transfer has been finished */
-	while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY);
-	HAL_GPIO_WritePin(DW_NSS_GPIO_Port, DW_NSS_Pin, GPIO_PIN_RESET); /**< Put chip select line low */
-	HAL_SPI_Transmit(&hspi1, reg, 1, HAL_MAX_DELAY); //No timeout
-	while (HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY);
-	HAL_SPI_Receive(&hspi1, &temp, 1, HAL_MAX_DELAY);  // receive 4 bytes data
-	HAL_SPI_Receive(&hspi1, temp8, length, HAL_MAX_DELAY);
-	while(HAL_SPI_GetState(&hspi1) != HAL_SPI_STATE_READY);
-	HAL_GPIO_WritePin(DW_NSS_GPIO_Port, DW_NSS_Pin, GPIO_PIN_SET); /**< Put chip select line high */
-	//for(uint8_t i=0;i<4;i++)temp = temp*0x100+temp8[3-i];
-}
 uint8 DW1000_init_fail()
 {
 	uint8 init_fail = 1;
@@ -155,14 +116,46 @@ uint8 DW1000_init_fail()
 	}
 	return init_fail;
 }
-void PrintReg(reg_id,reg_len)
+void DW1000_initiate()
 {
-	uint8_t temp[reg_len];
-	for(uint8_t i=0;i<reg_len;i++)temp[i]=0;
-	DW1000_read(reg_id,reg_len,&temp);
-	for(uint8_t i=0;i<reg_len;i++)debugInt8Hex(temp[reg_len-i-1]);
-	debugPrint("\r\n");
+	while(dwt_read16bitoffsetreg(AGC_CTRL_ID,AGC_TUNE1_OFFSET)!=0x8870)
+		dwt_write16bitoffsetreg(AGC_CTRL_ID,AGC_TUNE1_OFFSET,0x8870);
+	while(dwt_read32bitoffsetreg(DRX_CONF_ID,DRX_TUNE2_OFFSET)!=0x311A002D)
+		dwt_write32bitoffsetreg(DRX_CONF_ID,DRX_TUNE2_OFFSET,0x311A002D);
+	while(dwt_read8bitoffsetreg(LDE_IF_ID,LDE_CFG1_OFFSET)!=0x6D)
+		dwt_write8bitoffsetreg(LDE_IF_ID,LDE_CFG1_OFFSET,0x6D);
+	while(dwt_read16bitoffsetreg(LDE_IF_ID,LDE_CFG2_OFFSET)!=0x1607)
+		dwt_write16bitoffsetreg(LDE_IF_ID,LDE_CFG2_OFFSET,0x1607);
+	while(dwt_read32bitreg(TX_POWER_ID)!=0x0E082848)
+		dwt_write32bitreg(TX_POWER_ID,0x0E082848);
+	while(dwt_read32bitreg(SYS_CFG_ID)!=0x00001600)
+		dwt_write32bitreg(SYS_CFG_ID,0x00001600);
+	while(dwt_read8bitoffsetreg(FS_CTRL_ID,FS_PLLTUNE_OFFSET)!=0xBE)
+		dwt_write8bitoffsetreg(FS_CTRL_ID,FS_PLLTUNE_OFFSET,0xBE);
+}
+void spi_test()
+{
+ uint8 dataA[10] = {0x11,0x22,0x33,0x44,0x55,0x66,0x78,0x9A,0xBC,0xDE};
+ uint8 dataB[10];
+ dwt_writetodevice(0x21, 0, 10, &dataA);
+ while(1)
+ {
+	  HAL_Delay(1000);
+	  for(uint8 i =0;i<10;i++)dataB[i] = 0x00;
+	  dwt_readfromdevice(0x21, 0 , 10,&dataB);
+	  debugInt8Hex(dataB[0]);
+	  debugInt8Hex(dataB[1]);
+	  debugInt8Hex(dataB[2]);
+	  debugInt8Hex(dataB[3]);
+	  debugInt8Hex(dataB[4]);
+	  debugInt8Hex(dataB[5]);
+	  debugInt8Hex(dataB[6]);
+	  debugInt8Hex(dataB[7]);
+	  debugInt8Hex(dataB[8]);
+	  debugInt8Hex(dataB[9]);
+	  debugPrint("\r\n");
  }
+}
 /*-------------------------------------define ---------*/
 
 /* Inter-ranging delay period, in milliseconds. */
@@ -188,6 +181,16 @@ static dwt_config_t config = {
  *     - byte 2 -> 9: device ID, see NOTE 1 below.
  *     - byte 10/11: frame check-sum, automatically set by DW1000.  */
 static uint8 tx_msg[] = {0xC5, 0, 'D', 'E', 'C', 'A', 'W', 'A', 'V', 'E', 0, 0};
+/*
+D 0x44
+E 0x45
+C 0x43
+A 0x41
+W 0x57
+A 0x41
+V 0x56
+E 0x45
+*/
 /* Index to access to sequence number of the blink frame in the tx_msg array. */
 #define BLINK_FRAME_SN_IDX 1
 
@@ -199,8 +202,8 @@ static uint8 tx_msg[] = {0xC5, 0, 'D', 'E', 'C', 'A', 'W', 'A', 'V', 'E', 0, 0};
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -238,67 +241,43 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_SPI1_Init();
   MX_USART1_UART_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   uint32 u32;
   port_set_dw1000_slowrate();
   //port_set_dw1000_fastrate();
-  debugPrint("\r\n===============Restart_TX V1.0.1=================\r\n");
+  debugPrint("\r\n===============Restart_TX V1.0.0=================\r\n");
   while(1)
   {
 	  //DWReset();
+	  debugInt32Hexln(dwt_read32bitreg(SYS_STATUS_ID));
 	  reset_DW1000();
-	  u32 = dwt_readdevid();
-//	  debugInt32Hexln(u32);
-
-	  while((u32 = dwt_read32bitreg(SYS_CFG_ID))!=0x00001600)
-		  dwt_write32bitreg(SYS_CFG_ID,0x00001600);
-//	  debugInt32Hexln(u32);
-
-	  //port_set_dw1000_fastrate();
-	  debugInt32Hexln(dwt_read32bitoffsetreg(EXT_SYNC_ID,EC_CTRL_OFFSET));
-	  //reset_DW1000(); /* Target specific drive of RSTn line into DW1000 low for a period. */
+	  debugInt32Hexln(dwt_read32bitreg(DEV_ID_ID));
+	  debugInt32Hexln(dwt_read32bitreg(SYS_STATUS_ID));
 	  if(DW1000_init_fail())continue; //1 means initiate fails
+	  HAL_Delay(1000);
+	  debugInt32Hexln(dwt_read32bitreg(SYS_STATUS_ID));
+//	  debugInt32Hexln(u32);
+//	  debugInt32Hexln(u32);
 
 	  //port_set_dw1000_fastrate();
-	  if(dwt_read32bitreg(SYS_CFG_ID)!=0x00001200)continue;
+	  //debugInt32Hexln(dwt_read32bitoffsetreg(EXT_SYNC_ID,EC_CTRL_OFFSET));
+	  //reset_DW1000(); /* Target specific drive of RSTn line into DW1000 low for a period. */
 
-	  while((u32 = dwt_read32bitreg(SYS_CFG_ID))!=0x00001600)
-		  dwt_write32bitreg(SYS_CFG_ID,0x00001600);
-
-//	  debugInt32Hexln(dwt_read32bitreg(DEV_ID_ID));
-//	  debugInt32Hexln(dwt_read32bitreg(SYS_CFG_ID));
-//	  debugInt32Hexln(dwt_read32bitreg(SYS_STATUS_ID));
-//	  debugInt32Hexln(dwt_read32bitoffsetreg(DRX_CONF_ID,DRX_TUNE2_OFFSET));
-//	  debugInt16Hexln(dwt_read16bitoffsetreg(LDE_IF_ID,LDE_CFG2_OFFSET));
-//	  debugInt16Hexln(dwt_read16bitoffsetreg(AGC_CTRL_ID,AGC_TUNE1_OFFSET));
+	  DW1000_initiate();
+	  debugInt16Hexln(dwt_read16bitoffsetreg(AGC_CTRL_ID,AGC_TUNE1_OFFSET));
+	  debugInt32Hexln(dwt_read32bitoffsetreg(DRX_CONF_ID,DRX_TUNE2_OFFSET));
+	  debugInt8Hexln(dwt_read8bitoffsetreg(LDE_IF_ID,LDE_CFG1_OFFSET));
+	  debugInt16Hexln(dwt_read16bitoffsetreg(LDE_IF_ID,LDE_CFG2_OFFSET));
+	  debugInt32Hexln(dwt_read32bitreg(TX_POWER_ID));
+	  debugInt32Hexln(dwt_read32bitreg(SYS_STATE_ID)&0x000F0000);
+	  debugInt32Hexln(dwt_read32bitreg(SYS_STATUS_ID));
+	  debugInt8Hexln(dwt_read8bitoffsetreg(FS_CTRL_ID,FS_PLLTUNE_OFFSET));
 
 	  debugInt32Hexln(dwt_read32bitoffsetreg(EXT_SYNC_ID,EC_CTRL_OFFSET));
-
-
-	  //dwt_write8bitoffsetreg(EXT_SYNC_ID, EC_CTRL_OFFSET, EC_CTRL_PLLLCK);
-
-
-	  HAL_Delay(1000);
-
-	  uint8 dataA[10] = {0x11,0x22,0x33,0x44,0x55,0x66,0x78,0x9A,0xBC,0xDE};
-	  uint8 dataB[10];
-	  dwt_writetodevice(0x21, 0, 10, &dataA);
-	  dwt_readfromdevice(0x21, 0 , 10,&dataB);
-
-
-	  debugInt8Hex(dataB[0]);
-	  debugInt8Hex(dataB[1]);
-	  debugInt8Hex(dataB[2]);
-	  debugInt8Hex(dataB[3]);
-	  debugInt8Hex(dataB[4]);
-	  debugInt8Hex(dataB[5]);
-	  debugInt8Hex(dataB[6]);
-	  debugInt8Hex(dataB[7]);
-	  debugInt8Hex(dataB[8]);
-	  debugInt8Hex(dataB[9]);
-
+	  debugPrint("******************\r\n");
+	  //spi_test();
 	  while(1);
 
 
@@ -318,58 +297,74 @@ int main(void)
 	 while(1)
 	 {
 		 /* Write frame data to DW1000 and prepare transmission. See NOTE 4 below.*/
-		 reset_DW1000(); /* Target specific drive of RSTn line into DW1000 low for a period. */
-		 if(DW1000_init() == 1)continue;
-		 dwt_configure(&config);
+		 //reset_DW1000(); /* Target specific drive of RSTn line into DW1000 low for a period. */
+		 //if(DW1000_init() == 1)continue;
+		 //dwt_configure(&config);
 		 //HAL_Delay(200);
-		 u32 = 0;
-		 u32 = dwt_read32bitreg(SYS_STATUS_ID);
-		 if (u32 != 0x02800002)continue;
+		 //u32 = 0;
+		 //u32 = dwt_read32bitreg(SYS_STATUS_ID);
+		 //if (u32 != 0x02800002)continue;
 
 		 dwt_writetxdata(sizeof(tx_msg), tx_msg, 0); /* Zero offset in TX buffer. */
 		 dwt_writetxfctrl(sizeof(tx_msg), 0, 0); /* Zero offset in TX buffer, no ranging. */
 
-		 debugPrint("*");
-
 		 totcheck = 0;
-		 while ( u32 != 0x02800002)
+		 while ( u32 != 0x02800000)
 		 {
+		 	 dwt_write32bitreg(SYS_STATUS_ID, 0x000000F0);
 			 u32 = dwt_read32bitreg(SYS_STATUS_ID);
 			 totcheck ++;
-			 if (totcheck >1024)break;
+			 if (totcheck >10)break;
 		 }
-		 if (u32 != 0x02800002)continue;
+//		 if (u32 != 0x02800002)continue;
 
 		 /* Start transmission. */
+		 debugPrint("*");
+		 debugInt32Hexln(dwt_read32bitreg(SYS_STATUS_ID));
 		 dwt_starttx(DWT_START_TX_IMMEDIATE);
+//		  while(1)
+//		  {
+//			  dwt_starttx(DWT_START_TX_IMMEDIATE);
+//			  debugInt32Hexln(dwt_read32bitreg(SYS_STATE_ID));
+//			  debugInt32Hexln(dwt_read32bitreg(SYS_STATE_ID));
+//			  debugInt32Hexln(dwt_read32bitreg(SYS_STATE_ID));
+//			  debugInt32Hexln(dwt_read32bitreg(SYS_STATE_ID));
+//			  debugInt32Hexln(dwt_read32bitreg(SYS_STATE_ID));
+//			  debugInt32Hexln(dwt_read32bitreg(SYS_STATE_ID));
+//			  debugInt32Hexln(dwt_read32bitreg(SYS_STATE_ID));
+//			  debugInt32Hexln(dwt_read32bitreg(SYS_STATE_ID));
+//			  debugPrint("%%%%%%%%%%%\r\n");
+//			  HAL_Delay(1000);
+//		  }
 
 		 /* Poll DW1000 until TX frame sent event set. See NOTE 5 below.
 		  * STATUS register is 5 bytes long but, as the event we are looking at is in the first byte of the register, we can use this simplest API
 		  * function to access it.*/
 		 u32 = 0;
-		 u32 = dwt_read32bitreg(SYS_STATUS_ID)& SYS_STATUS_TXFRS;
-		 while ( u32 != SYS_STATUS_TXFRS)
+		 u32 = dwt_read32bitreg(SYS_STATUS_ID);
+		 while ( (u32 & SYS_STATUS_TXFRS) != SYS_STATUS_TXFRS)
 		 {
 			 //debugPrint("not ok\r\n");
-			 u32 = dwt_read32bitreg(SYS_STATUS_ID)& SYS_STATUS_TXFRS;
+			 u32 = dwt_read32bitreg(SYS_STATUS_ID);
 			 totcheck ++;
 			 if (totcheck >1024)break;
 		 }
-		 if (u32 != SYS_STATUS_TXFRS)continue;
+		 if ((u32 & SYS_STATUS_TXFRS) != SYS_STATUS_TXFRS)continue;
 
-		 debugPrint("ok!\r\n");
+		 debugPrint("^");
+		 debugInt32Hexln(u32);
+
+		 debugPrint("--ok!\r\n");
 
 		 /* Clear TX frame sent event. */
 		 dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS);
 
 		 /* Execute a delay between transmissions. */
-		 //Sleep(TX_DELAY_MS);
+		 Sleep(TX_DELAY_MS);
 		 short_flash();
 
 		 /* Increment the blink frame sequence number (modulo 256). */
 		 tx_msg[BLINK_FRAME_SN_IDX]++;
-
-
 	 }
 
 	  while(1);
@@ -450,7 +445,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -481,7 +476,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
+  huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -517,7 +512,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, DW_RST_Pin|DW_NSS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, DW_RESET_Pin|DW_NSS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -526,12 +521,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : DW_RST_Pin */
-  GPIO_InitStruct.Pin = DW_RST_Pin;
+  /*Configure GPIO pin : DW_IRQn_Pin */
+  GPIO_InitStruct.Pin = DW_IRQn_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(DW_IRQn_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : DW_RESET_Pin */
+  GPIO_InitStruct.Pin = DW_RESET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(DW_RST_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(DW_RESET_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : DW_NSS_Pin */
   GPIO_InitStruct.Pin = DW_NSS_Pin;
@@ -539,12 +540,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(DW_NSS_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : DW_IRQn_Pin */
-  GPIO_InitStruct.Pin = DW_IRQn_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(DW_IRQn_GPIO_Port, &GPIO_InitStruct);
 
 }
 

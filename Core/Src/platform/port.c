@@ -146,19 +146,19 @@ void reset_DW1000(void)
     GPIO_InitTypeDef    GPIO_InitStruct;
 
     // Enable GPIO used for DW1000 reset as open collector output
-    GPIO_InitStruct.Pin = DW_RST_Pin;
+    GPIO_InitStruct.Pin = DW_RESET_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(DW_RST_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(DW_RESET_GPIO_Port, &GPIO_InitStruct);
 
     //drive the RSTn pin low
-    HAL_GPIO_WritePin(DW_RST_GPIO_Port, DW_RST_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(DW_RESET_GPIO_Port, DW_RESET_Pin, GPIO_PIN_RESET);
 
     usleep(1);
 
     //put the pin back to output open-drain (not active)
     //setup_DW1000RSTnIRQ(0);
-    HAL_GPIO_WritePin(DW_RST_GPIO_Port, DW_RST_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(DW_RESET_GPIO_Port, DW_RESET_Pin, GPIO_PIN_SET);
 
     Sleep(2);
 }
@@ -175,10 +175,10 @@ void setup_DW1000RSTnIRQ(int enable)
     if(enable)
     {
         // Enable GPIO used as DECA RESET for interrupt
-        GPIO_InitStruct.Pin = DW_RST_Pin;
+        GPIO_InitStruct.Pin = DW_RESET_Pin;
         GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(DW_RST_GPIO_Port, &GPIO_InitStruct);
+        HAL_GPIO_Init(DW_RESET_GPIO_Port, &GPIO_InitStruct);
 
         HAL_NVIC_EnableIRQ(EXTI0_IRQn);     //pin #0 -> EXTI #0
         HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);
@@ -189,12 +189,12 @@ void setup_DW1000RSTnIRQ(int enable)
 
         //put the pin back to tri-state ... as
         //output open-drain (not active)
-        GPIO_InitStruct.Pin = DW_RST_Pin;
+        GPIO_InitStruct.Pin = DW_RESET_Pin;
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(DW_RST_GPIO_Port, &GPIO_InitStruct);
-        HAL_GPIO_WritePin(DW_RST_GPIO_Port, DW_RST_Pin, GPIO_PIN_SET);
+        HAL_GPIO_Init(DW_RESET_GPIO_Port, &GPIO_InitStruct);
+        HAL_GPIO_WritePin(DW_RESET_GPIO_Port, DW_RESET_Pin, GPIO_PIN_SET);
     }
 }
 
@@ -311,7 +311,7 @@ void port_set_dw1000_fastrate(void)
  * */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    if (GPIO_Pin == DW_RST_Pin)
+    if (GPIO_Pin == DW_RESET_Pin)
     {
         signalResetDone = 1;
     }
